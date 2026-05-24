@@ -45,15 +45,16 @@ class PN532 : public PollingComponent {
   void register_ontag_trigger(nfc::NfcOnTagTrigger *trig) { this->triggers_ontag_.push_back(trig); }
   void register_ontagremoved_trigger(nfc::NfcOnTagTrigger *trig) { this->triggers_ontagremoved_.push_back(trig); }
 
-  void add_on_finished_write_callback(std::function<void()> callback) {
-    this->on_finished_write_callback_.add(std::move(callback));
+  template<typename F> void add_on_finished_write_callback(F &&callback) {
+    this->on_finished_write_callback_.add(std::forward<F>(callback));
   }
+
+  bool is_writing() { return this->next_task_ != READ; };
 
   std::vector<uint8_t> inDataExchange(const std::vector<uint8_t>& data);
 
   void set_ecp_frame(std::vector<uint8_t>& frame) { ecp_frame = frame; };
 
-  bool is_writing() { return this->next_task_ != READ; };
 
   void read_mode();
   void clean_mode();
@@ -110,7 +111,7 @@ class PN532 : public PollingComponent {
   std::vector<nfc::NfcOnTagTrigger *> triggers_ontagremoved_;
   nfc::NfcTagUid current_uid_;
   nfc::NdefMessage *next_task_message_to_write_;
-  uint32_t rd_start_time_{0};
+  optional<uint32_t> rd_start_time_{};
   enum PN532ReadReady rd_ready_ { WOULDBLOCK };
   enum NfcTask {
     READ = 0,
@@ -142,13 +143,6 @@ class PN532BinarySensor : public binary_sensor::BinarySensor {
  protected:
   nfc::NfcTagUid uid_;
   bool found_{false};
-};
-
-class PN532OnFinishedWriteTrigger : public Trigger<> {
- public:
-  explicit PN532OnFinishedWriteTrigger(PN532 *parent) {
-    parent->add_on_finished_write_callback([this]() { this->trigger(); });
-  }
 };
 
 template<typename... Ts> class PN532IsWritingCondition : public Condition<Ts...>, public Parented<PN532> {

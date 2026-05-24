@@ -76,8 +76,7 @@ CONFIG_SCHEMA = cv.All(cv.Schema({
     cv.Optional("switch"):  cv.ensure_list({cv.Required(CONF_ID): cv.use_id(switch.Switch), cv.Optional("meta") : ACCESSORY_INFORMATION}),
     cv.Optional("climate"):  cv.ensure_list({cv.Required(CONF_ID): cv.use_id(climate.Climate), cv.Optional("meta") : ACCESSORY_INFORMATION}),
 }).extend(cv.COMPONENT_SCHEMA),
-cv.only_on([PLATFORM_ESP32]),
-cv.only_with_esp_idf)
+cv.only_on_esp32)
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
@@ -102,8 +101,6 @@ async def to_code(config):
         for l in config["lock"]:
             lock_entity = cg.Pvariable(ID(f"{l['id'].id}_hk_lock_entity", type=LockEntity), var.add_lock(await cg.get_variable(l['id'])))
             if "nfc_id" in l:
-                cg.add_build_flag("-fexceptions")
-                cg.add_platformio_option("build_unflags", "-fno-exceptions")
                 nfc = await cg.get_variable(l["nfc_id"])
                 cg.add(var.set_nfc_ctx(nfc))
                 cg.add(var.set_hk_hw_finish(l["hk_hw_finish"]))
